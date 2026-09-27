@@ -83,8 +83,6 @@ assignments/chapter02/images/step01_environment.png
 
 ![PostgreSQL 현재 위치 확인](./images/step01_environment.png)
 
-`여기에 STEP 1 핵심 증거 화면을 삽입하세요.`
-
 ---
 
 # 2. 데이터베이스 안의 스키마와 테이블 관찰
