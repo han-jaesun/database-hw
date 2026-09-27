@@ -81,9 +81,7 @@ PostgreSQL에 접속해 SQL을 보내고 결과를 화면에 보여주는 클라
 assignments/chapter02/images/step01_environment.png
 ```
 
-```markdown
 ![PostgreSQL 현재 위치 확인](./images/step01_environment.png)
-```
 
 `여기에 STEP 1 핵심 증거 화면을 삽입하세요.`
 
