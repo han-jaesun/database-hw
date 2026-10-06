@@ -120,7 +120,7 @@ assignments/chapter04/images/step02_table.png
 ```text
 현재 행 수: 0
 실행 후 예상 행 수: 6
-예상되는 NULL 포함 학생:
+예상되는 NULL 포함 학생: 윤서진 (이름과 이메일만 입력하고 전공과 학년을 생략했으므로 major, grade가 NULL)
 ```
 
 ## 3-2. 실행 파일
@@ -132,24 +132,26 @@ code/chapter04/02_insert_students.sql
 ## 3-3. 실제 결과
 
 ```text
-실제 행 수:
-이준호 grade:
-박서연 존재 여부:
-윤서진 major:
-윤서진 grade:
+실제 행 수: 6
+이준호 grade: 3
+박서연 존재 여부: 존재함 (경영학, 1학년)
+윤서진 major: NULL
+윤서진 grade: NULL
 ```
 
 ### 예상과 실제 비교
 
 ```text
-예상과 실제가 일치했는가:
-다르다면 이유:
+예상과 실제가 일치했는가: 일치했다. 6명이 입력되었고, 윤서진만 major와 grade가 NULL이었다.
+다르다면 이유: 해당 없음
 ```
 
 ### `created_at` 값이 여러 행에서 같을 수 있는 이유
 
 ```text
-
+created_at은 값을 넣지 않으면 CURRENT_TIMESTAMP가 자동으로 들어가는데,
+CURRENT_TIMESTAMP는 SQL이 실행된 순간이 아니라 트랜잭션이 시작된 시각을 기준으로 한다.
+그래서 같은 트랜잭션 안에서 여러 행을 한꺼번에 넣으면, 예를 들어 이준호부터 정하늘까지 4명을 한 번의INSERT로 넣으면 모두 같은 시각이 저장될 수 있다. 시각이 같다고 해서 오류가 있는 것은 아니다.
 ```
 
 ---
@@ -160,55 +162,67 @@ code/chapter04/02_insert_students.sql
 
 | 번호 | 조회 문제 | 예상 행 수 | 실제 행 수 | 일치? | 다르면 이유 |
 | ---: | --- | ---: | ---: | --- | --- |
-| 1 | 전체 학생 |  |  |  |  |
-| 2 | 이름·이메일만 조회 |  |  |  |  |
-| 3 | 특정 전공 |  |  |  |  |
-| 4 | 특정 학년 이상 |  |  |  |  |
-| 5 | 두 전공 중 하나 |  |  |  |  |
-| 6 | `grade IS NULL` |  |  |  |  |
-| 7 | 전공 `DISTINCT` |  |  |  |  |
-| 8 | 정렬 후 상위 3명 |  |  |  |  |
+| 1 | 전체 학생 | 6 | 6 | 일치 | |
+| 2 | 이름·이메일만 조회 | 6 | 6 | 일치 | 열만 줄었고 행 수는 그대로 |
+| 3 | 특정 전공 (컴퓨터공학) | 2 | 2 | 일치 | |
+| 4 | 특정 학년 이상 (3학년 이상) | 2 | 2 | 일치 | 윤서진(NULL)은 비교 대상에서 빠짐 |
+| 5 | 두 전공 중 하나 (컴퓨터공학, 경영학) | 3 | 3 | 일치 | |
+| 6 | `grade IS NULL` | 1 | 1 | 일치 | |
+| 7 | 전공 `DISTINCT` | 5 | 5 | 일치 | 전공 4종류 + NULL 1행 |
+| 8 | 정렬 후 상위 3명 (id 순) | 3 | 3 | 일치 | |
 
 ## 4-1. 내가 직접 작성한 SQL 2개
 
 ```sql
--- SQL 1
-
+-- SQL 1: 2학년 학생만 이름순으로 조회
+SELECT id, name, major, grade
+FROM public.students
+WHERE grade = 2
+ORDER BY name;
 ```
 
 ```text
-이 SQL의 한 행 의미:
-예상 행 수:
-실제 행 수:
+이 SQL의 한 행 의미: 2학년 학생 한 명
+예상 행 수: 2 (김민지, 정하늘)
+실제 행 수: 2
 ```
 
 ```sql
--- SQL 2
-
+-- SQL 2: 전공별 학생 수 세기
+SELECT major, COUNT(*) AS student_count
+FROM public.students
+GROUP BY major
+ORDER BY student_count DESC;
 ```
 
 ```text
-이 SQL의 한 행 의미:
-예상 행 수:
-실제 행 수:
+이 SQL의 한 행 의미: 학생 한 명이 아니라 "전공 하나와 그 전공의 학생 수"
+예상 행 수: 5 (컴퓨터공학 2명, 데이터사이언스·경영학·AI데이터공학 각 1명, 전공 없음(NULL) 1명)
+실제 행 수: 5
 ```
 
 ## 4-2. `= NULL` 대신 `IS NULL`을 사용하는 이유
 
 ```text
-
+NULL은 0이나 빈 문자열이 아니라 "값을 모른다"는 뜻이라, 어떤 값과 = 로 비교해도 참도 거짓도 아닌 "알 수 없음"이 된다.
+그래서 WHERE grade = NULL은 윤서진처럼 학년이 비어 있는 학생도 찾지 못하고 0행이 나온다.
+NULL인지 확인하려면 반드시 IS NULL을 써야 하고, 실제로 WHERE grade IS NULL은 윤서진 1행을 찾았다.
 ```
 
 ## 4-3. `ORDER BY` 없이 결과 순서를 믿으면 안 되는 이유
 
 ```text
-
+테이블은 행을 특정 순서로 보관한다고 보장하지 않는다. 지금은 입력한 순서대로 보이더라도
+데이터가 수정되거나 삭제되면 조회 순서가 바뀔 수 있다.
+"상위 3명"처럼 순서가 의미 있는 조회는 ORDER BY로 기준을 직접 정해야 같은 결과를 얻을 수 있다.
 ```
 
 ## 4-4. `DISTINCT`가 원본 데이터를 삭제하는 기능인가요?
 
 ```text
-
+아니다. DISTINCT는 조회 결과에서 중복된 값을 한 번만 보여 줄 뿐이다.
+전공 DISTINCT 결과는 5행이었지만 students 테이블에는 여전히 6명이 그대로 있다.
+예를 들어 컴퓨터공학 학생 2명은 결과에서 한 줄로 보였을 뿐 둘 다 삭제되지 않았다.
 ```
 
 ### 증거 화면
@@ -219,7 +233,7 @@ code/chapter04/02_insert_students.sql
 assignments/chapter04/images/step04_select.png
 ```
 
-`여기에 SELECT 핵심 결과 화면을 삽입하세요.`
+![전공별 학생 수 조회 결과](./images/step04_select.png)
 
 ---
 
@@ -231,39 +245,45 @@ assignments/chapter04/images/step04_select.png
 
 ```text
 학생 A
-이름:
-이메일:
-전공:
-학년:
+이름: 가상학생A
+이메일: student_a@example.com
+전공: 데이터과학
+학년: 2
 
 학생 B
-이름:
-이메일:
-전공:
-학년 또는 NULL:
+이름: 가상학생B
+이메일: student_b@example.com
+전공: 인공지능
+학년 또는 NULL: NULL
 
-현재 행 수:
-추가 후 예상 행 수:
+현재 행 수: 5
+추가 후 예상 행 수: 7
 ```
 
 ## 5-2. 내가 실행한 INSERT
 
 ```sql
-
+INSERT INTO public.students (name, email, major, grade)
+VALUES
+    ('가상학생A', 'student_a@example.com', '데이터과학', 2),
+    ('가상학생B', 'student_b@example.com', '인공지능', NULL)
+RETURNING id, name, email, major, grade;
 ```
 
 ## 5-3. 실제 결과
 
 ```text
-RETURNING 또는 확인 SELECT 결과:
-실제 전체 행 수:
-예상과 일치 여부:
+RETURNING 또는 확인 SELECT 결과: 가상학생A(데이터과학, 2학년), 가상학생B(인공지능, 학년 NULL) 2행이 반환되었다.
+실제 전체 행 수: 7
+예상과 일치 여부: 일치 (5명 + 2명 = 7명)
 ```
 
 ### 내가 일부 값을 NULL로 둔 이유 또는 NULL을 사용하지 않은 이유
 
 ```text
-
+가상학생B는 아직 학년이 정해지지 않은 상황을 가정해 grade를 NULL로 두었다.
+grade 열은 NULL을 허용하므로 정상적으로 저장되며, 0처럼 임의의 값을 넣으면 "0학년"이라는 잘못된 정보가 되기 때문에
+모르는 값은 NULL로 두는 것이 맞다. 또 다음 단계에서 이 학생을 삭제할 때 구분하기 쉽도록 학생 A와 다르게 설정했다.
 ```
 
 ---
@@ -275,36 +295,46 @@ RETURNING 또는 확인 SELECT 결과:
 ## 6-1. 먼저 대상 확인 SELECT
 
 ```sql
-
+SELECT *
+FROM public.students
+WHERE email = 'student_a@example.com';
 ```
 
 ```text
-예상 대상 행 수:
-실제 대상 행 수:
+예상 대상 행 수: 1
+실제 대상 행 수: 1
 ```
 
 ## 6-2. UPDATE
 
 ```sql
-
+UPDATE public.students
+SET grade = 3
+WHERE email = 'student_a@example.com'
+RETURNING id, name, email, grade;
 ```
 
 ```text
-예상 영향 행 수:
-실제 영향 행 수:
-RETURNING 결과:
+예상 영향 행 수: 1
+실제 영향 행 수: 1
+RETURNING 결과: 가상학생A, student_a@example.com, grade 3 (2학년에서 3학년으로 변경됨)
 ```
 
 ## 6-3. UPDATE 후 재조회
 
 ```sql
-
+SELECT *
+FROM public.students
+WHERE email = 'student_a@example.com';
 ```
 
 ### `WHERE` 없는 UPDATE를 실행하면 위험한 이유
 
 ```text
-
+WHERE가 없으면 조건 없이 테이블의 모든 행이 바뀐다.
+예를 들어 UPDATE public.students SET grade = 3; 을 실행하면 가상학생A뿐 아니라 7명 전원의 학년이 3이 된다.
+지금은 Auto-commit 상태라 실행 즉시 저장되므로 되돌리기 어렵다.
+그래서 UPDATE 전에 같은 WHERE 조건으로 SELECT해서 대상이 정확히 몇 행인지 먼저 확인해야 한다.
 ```
 
 ### 증거 화면
@@ -315,7 +345,7 @@ RETURNING 결과:
 assignments/chapter04/images/step06_update.png
 ```
 
-`여기에 UPDATE 전/후 결과 화면을 삽입하세요.`
+![UPDATE 전후 확인](./images/step06_update.png)
 
 ---
 
@@ -326,40 +356,48 @@ assignments/chapter04/images/step06_update.png
 ## 7-1. 삭제 전 확인
 
 ```sql
-
+SELECT *
+FROM public.students
+WHERE email = 'student_b@example.com';
 ```
 
 ```text
-예상 대상 행 수:
-실제 대상 행 수:
+예상 대상 행 수: 1
+실제 대상 행 수: 1
 ```
 
 ## 7-2. DELETE
 
 ```sql
-
+DELETE FROM public.students
+WHERE email = 'student_b@example.com'
+RETURNING id, name, email;
 ```
 
 ```text
-예상 영향 행 수:
-실제 영향 행 수:
-RETURNING 결과:
+예상 영향 행 수: 1
+실제 영향 행 수: 1
+RETURNING 결과: 가상학생B, student_b@example.com 1행이 삭제되었다.
 ```
 
 ## 7-3. 삭제 후 재조회
 
 ```sql
-
+SELECT *
+FROM public.students
+WHERE email = 'student_b@example.com';
 ```
 
 ```text
-삭제 후 같은 조건의 SELECT 결과 행 수:
+삭제 후 같은 조건의 SELECT 결과 행 수: 0
 ```
 
 ### `DELETE` 성공 메시지만 보고 끝내지 않고 다시 SELECT해야 하는 이유
 
 ```text
-
+DELETE가 오류 없이 실행되었다는 것은 문법이 맞았다는 뜻일 뿐, 내가 의도한 학생이 정확히 지워졌다는 보장은 아니다.
+WHERE 조건이 틀렸다면 0행이 지워지거나 다른 학생이 지워져도 성공 메시지는 똑같이 나올 수 있다.
+그래서 같은 조건으로 다시 SELECT해서 0행이 나오는지, 전체 학생 수가 예상대로 줄었는지 직접 확인해야 한다.
 ```
 
 ---
@@ -369,9 +407,9 @@ RETURNING 결과:
 `04_update_delete_students.sql`을 본문 시작 상태에서 실행했다면 다음을 확인합니다.
 
 ```text
-최종 학생 수:
-이준호 grade:
-박서연 존재 여부:
+최종 학생 수: 6
+이준호 grade: 4
+박서연 존재 여부: 0행 (삭제됨)
 ```
 
 본문 기준 기대 상태와 비교합니다.
@@ -385,7 +423,9 @@ RETURNING 결과:
 ### 내 실제 결과가 기준과 다르다면 원인
 
 ```text
-
+이준호 grade = 4, 박서연 = 0행은 기준과 일치했다.
+학생 수만 기준(5명)과 달리 6명이었는데, 8번을 실행하기 전에 가상학생 2명을 추가하고 그중 1명(가상학생B)만 삭제해서
+내가 추가한 가상학생A 1명이 남아 있기 때문이다. UPDATE·DELETE 자체는 의도대로 실행되었다.
 ```
 
 ---
@@ -399,14 +439,18 @@ RETURNING 결과:
 내가 사용한 SQL:
 
 ```sql
-
+INSERT INTO public.students (name, email, major, grade)
+VALUES
+    ('가상학생A', 'student_a@example.com', '데이터과학', 2),
+    ('가상학생B', 'student_b@example.com', '인공지능', NULL)
+RETURNING id, name, email, major, grade;
 ```
 
 ```text
-오류 메시지 핵심 단서:
-왜 실패해야 맞는가:
-어떤 규칙이 작동했는가:
-실패 후 기존 데이터가 어떻게 유지되었는가:
+오류 메시지 핵심 단서: duplicate key value violates unique constraint "students_email_key", Key (email)=(student_a@example.com) already exists
+왜 실패해야 맞는가: 이메일은 학생마다 하나씩이어야 하는데, 이미 가상학생A가 같은 이메일로 저장되어 있는 상태에서 같은 INSERT를 한 번 더 실행했기 때문이다.
+어떤 규칙이 작동했는가: email 열의 UNIQUE 제약조건
+실패 후 기존 데이터가 어떻게 유지되었는가: INSERT 전체가 실패해 가상학생A와 가상학생B 모두 새로 추가되지 않았고, 기존 가상학생A 데이터는 그대로 남았다.
 ```
 
 ## 9-2. 이름 `NULL` 입력 `NOT NULL` 오류
@@ -414,19 +458,22 @@ RETURNING 결과:
 내가 사용한 SQL:
 
 ```sql
-
+INSERT INTO public.students (name, email, major, grade)
+VALUES (NULL, 'null_name_test@example.com', '테스트전공', 1);
 ```
 
 ```text
-오류 메시지 핵심 단서:
-왜 실패해야 맞는가:
-어떤 규칙이 작동했는가:
+오류 메시지 핵심 단서: null value in column "name" of relation "students" violates not-null constraint
+왜 실패해야 맞는가: name은 반드시 입력해야 하는 필수 열인데 이름 자리에 NULL을 넣으려 했기 때문이다. 이름 없는 학생이 저장되면 누구인지 알 수 없는 잘못된 데이터가 된다.
+어떤 규칙이 작동했는가: name 열의 NOT NULL 제약조건
 ```
 
 ### 실패한 INSERT 뒤 자동 생성 `id` 번호에 빈 구간이 생길 수 있어도 문제라고 단정할 수 없는 이유
 
 ```text
-
+id는 INSERT를 시도할 때 번호를 먼저 하나 꺼내 쓰기 때문에, INSERT가 실패해도 그 번호는 되돌아오지 않는다.
+실제로 NOT NULL 오류 메시지에 id가 17로 표시되었는데, 학생은 6명뿐이다. 앞서 실패한 INSERT들이 번호를 사용했기 때문이다.
+id는 행을 구분하는 내부 번호일 뿐 학생 수나 순번이 아니므로 빈 번호가 있어도 문제가 아니다. 학생 수는 COUNT(*)로 확인해야 한다.
 ```
 
 ### 증거 화면
@@ -437,7 +484,7 @@ RETURNING 결과:
 assignments/chapter04/images/step09_constraint_error.png
 ```
 
-`여기에 제약조건 오류 화면을 삽입하세요.`
+![NOT NULL 제약조건 오류](./images/step09_constraint_error.png)
 
 ---
 
@@ -450,17 +497,19 @@ code/chapter04/verify_students.sql
 ```
 
 ```text
-현재 전체 학생 수:
-NULL 개수:
-이준호 grade:
-박서연 존재 여부:
-현재 데이터 상태에서 예상과 다른 부분:
+현재 전체 학생 수: 6
+NULL 개수: major NULL 1개, grade NULL 1개 (둘 다 윤서진)
+이준호 grade: 4
+박서연 존재 여부: 없음
+현재 데이터 상태에서 예상과 다른 부분: 본문 기준 5명보다 1명 많은 6명인데, 내가 추가한 가상학생A가 남아 있기 때문이며 의도한 결과이다.
 ```
 
 ### 검증 SQL을 따로 두면 좋은 이유
 
 ```text
-
+SQL이 오류 없이 실행되었다고 최종 데이터가 맞다는 보장은 없다.
+검증 SQL을 따로 두면 데이터를 바꾸지 않고 언제든 반복 실행해서 학생 수, NULL 개수, 핵심 값이 예상과 같은지 한 번에 확인할 수 있다.
+실제로 이번 실습에서도 중간에 SQL이 꼬여 8번이 실행되지 않은 것을 확인용 SELECT로 발견했다.
 ```
 
 ---
@@ -472,33 +521,44 @@ NULL 개수:
 ## 11-1. 내가 작성한 SQL
 
 ```sql
-
+UPDATE public.students
+SET grade = 3
+WHERE email = 'student_a@example.com'
+RETURNING id, name, email, grade;
 ```
 
 ## 11-2. AI에게 전달한 핵심 요청
 
 ```text
-
+아래 SQL의 안전성을 검토해 주세요.
+1. 예상 영향 행 수
+2. WHERE 조건이 충분히 구체적인지
+3. 실행 전 확인할 SELECT
+4. 실행 후 확인할 SELECT
+5. 잘못 실행했을 때의 위험
 ```
 
 ## 11-3. AI 검토 결과
 
 | AI 제안 | 수용 / 수정 / 거절 | 실제 검증 결과 | 나의 이유 |
 | --- | --- | --- | --- |
-|  |  |  |  |
-|  |  |  |  |
-|  |  |  |  |
+| email은 UNIQUE라 영향 행 수는 최대 1행이다 | 수용 | 실행 전 SELECT 1행, RETURNING 1행으로 실제 1행만 바뀌었다 | 테이블 생성 시 email에 UNIQUE를 걸었으므로 같은 이메일은 한 명뿐이다 |
+| 실행 전 같은 WHERE 조건으로 SELECT해 대상을 확인하라 | 수용 | 가상학생A 1명, grade 2를 먼저 확인했다 | 대상이 0행이거나 엉뚱한 학생이면 UPDATE 전에 멈출 수 있다 |
+| 안전을 위해 WHERE에 name = '가상학생A' 조건도 함께 추가하라 | 거절 | email만으로 이미 1행이 정확히 지정되었다 | email이 UNIQUE라 추가 조건은 불필요하고, 이름은 바뀔 수 있어 오히려 대상을 놓칠 수 있다 |
 
 ### AI가 예상한 영향 행 수와 실제 결과가 같았나요?
 
 ```text
-
+같았다. AI는 email이 UNIQUE이므로 최대 1행이 바뀐다고 예상했고,
+실제로 RETURNING 결과도 가상학생A 1행(grade 3)이었다.
 ```
 
 ### AI 답변을 실행 전에 검토해야 하는 이유
 
 ```text
-
+AI는 테이블에 어떤 제약조건이 있는지, 실제 데이터가 몇 행인지 모르는 상태에서 일반적인 답을 줄 수 있다.
+Auto-commit 상태에서는 UPDATE·DELETE가 실행 즉시 저장되므로, AI가 잘못된 WHERE를 제안해도 되돌리기 어렵다.
+그래서 AI의 제안도 실제 테이블 구조와 실행 전 SELECT 결과로 먼저 확인한 뒤 실행해야 한다.
 ```
 
 ---
