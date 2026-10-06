@@ -484,7 +484,7 @@ id는 행을 구분하는 내부 번호일 뿐 학생 수나 순번이 아니므
 assignments/chapter04/images/step09_constraint_error.png
 ```
 
-![NOT NULL 제약조건 오류](./step09_constraint_error.png)
+![NOT NULL 제약조건 오류](./step09_constraint.png)
 
 ---
 
