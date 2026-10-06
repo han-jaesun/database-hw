@@ -109,7 +109,7 @@ id가 6이라고 해서 학생이 6명이라는 뜻도 아니다. 학생 수는 
 assignments/chapter04/images/step02_table.png
 ```
 
-![students 테이블 구조 확인](./images/step02_table.png)
+![students 테이블 구조 확인](./step02_table.png)
 
 ---
 
@@ -233,7 +233,7 @@ NULL인지 확인하려면 반드시 IS NULL을 써야 하고, 실제로 WHERE g
 assignments/chapter04/images/step04_select.png
 ```
 
-![전공별 학생 수 조회 결과](./images/step04_select.png)
+![전공별 학생 수 조회 결과](./step04_select.png)
 
 ---
 
@@ -345,7 +345,7 @@ WHERE가 없으면 조건 없이 테이블의 모든 행이 바뀐다.
 assignments/chapter04/images/step06_update.png
 ```
 
-![UPDATE 전후 확인](./images/step06_update.png)
+![UPDATE 전후 확인](./step06_update.png)
 
 ---
 
@@ -484,7 +484,7 @@ id는 행을 구분하는 내부 번호일 뿐 학생 수나 순번이 아니므
 assignments/chapter04/images/step09_constraint_error.png
 ```
 
-![NOT NULL 제약조건 오류](./images/step09_constraint_error.png)
+![NOT NULL 제약조건 오류](./step09_constraint_error.png)
 
 ---
 
