@@ -224,10 +224,9 @@ assignments/chapter05/images/step07_library_erd.png
 Markdown 예시:
 
 ```markdown
-![도서 대여 ERD](./images/step07_library_erd.png)
 ```
 
-`여기에 ERD 이미지를 삽입하세요.`
+![도서 대여 ERD](./images/step07_library_erd.png)
 
 ### ERD를 그린 뒤 수정한 부분
 
