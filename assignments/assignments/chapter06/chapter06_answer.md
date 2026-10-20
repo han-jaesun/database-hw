@@ -214,15 +214,15 @@ code/chapter06/03_normalization_compare.sql
 실행 전 예상:
 
 ```text
-생성될 테이블 수:
-각 테이블 예상 행 수:
+생성될 테이블 수: 4개 (library_records_raw, members_nf, books_nf, loans_nf)
+각 테이블 예상 행 수: 모두 0행
 ```
 
 실행 후:
 
 ```text
-실제로 생성된 테이블:
-각 테이블 실제 행 수:
+실제로 생성된 테이블: library_records_raw, members_nf, books_nf, loans_nf
+각 테이블 실제 행 수: 모두 0행
 ```
 
 ## 5-2. `02_normalization_seed.sql`
@@ -242,41 +242,46 @@ loans = 3
 실제 결과:
 
 ```text
-raw:
-members:
-books:
-loans:
-미반납:
-회원 101 대여:
-도서 201 대여:
+raw: 3
+members: 2
+books: 2
+loans: 3
+미반납: 2
+회원 101 대여: 2
+도서 201 대여: 2
 ```
 
 예상과 다른 값이 있다면 이유:
 
 ```text
-
+예상과 모두 같았다. 정규화 전 raw 표는 대여 3건에 김민지의 이메일과 "데이터베이스 입문"의 제목·저자가 반복 저장되었고,
+정규화 후에는 회원 2명·도서 2권이 각각 한 번씩만 저장되고 대여 3건은 member_id와 book_id로 회원과 도서를 가리킨다.
 ```
 
 ## 5-3. `03_normalization_compare.sql`
 
 ```text
-검증 메시지:
-PASS / FAIL:
+검증 메시지: Chapter 06 normalization comparison passed
+PASS / FAIL: PASS
 ```
 
 다음 항목을 확인합니다.
 
 ```text
-회원 고아 참조:
-도서 고아 참조:
-날짜 순서 오류:
-활성 대여 중복:
+회원 고아 참조: 0
+도서 고아 참조: 0
+날짜 순서 오류: 0
+활성 대여 중복: 0
 ```
 
 ### 정규화 후에도 JOIN으로 원래 업무 정보를 다시 볼 수 있는 이유
 
 ```text
-
+정규화는 정보를 지우는 것이 아니라 각 사실을 주인 테이블로 옮기는 것이다.
+loans_nf가 member_id와 book_id로 회원과 도서를 정확히 가리키고 있기 때문에,
+JOIN으로 번호를 따라가면 "누가, 어떤 책을, 언제 빌렸는지"를 raw 표와 같은 모습으로 다시 만들 수 있다.
+실제로 loans_nf, members_nf, books_nf를 JOIN한 결과가 library_records_raw의 3행과 같은 내용으로 나왔다.
+다만 이번에는 이메일과 제목이 한 곳에만 저장되어 있어 수정 이상이 생기지 않는다.
 ```
 
 ### 증거 화면
@@ -287,7 +292,7 @@ PASS / FAIL:
 assignments/chapter06/images/step05_normalization.png
 ```
 
-`여기에 정규화 전후 및 검증 결과 화면을 삽입하세요.`
+![정규화 전후 비교 결과](./images/step05_normalization.png)
 
 ---
 
@@ -295,19 +300,22 @@ assignments/chapter06/images/step05_normalization.png
 
 | ID | 확정 규칙 | 구현 방법 | 왜 필요한가 | Chapter 05에서는 왜 미확정이었나 |
 | --- | --- | --- | --- | --- |
-| C-01 | 이메일 문자열 중복 금지 | `UNIQUE` |  |  |
-| C-02 | ISBN 필수·중복 금지 | `NOT NULL + UNIQUE` |  |  |
-| C-03 | 이름·제목 공백 금지 | `CHECK` |  |  |
-| C-04 | `due_at >= borrowed_at` | `CHECK` |  |  |
-| C-05 | `returned_at`은 NULL 또는 대여일 이상 | `CHECK` |  |  |
-| C-06 | 존재하는 회원·도서만 참조 | `FOREIGN KEY` |  |  |
-| C-07 | 대여 이력이 있는 부모 삭제 금지 | `ON DELETE RESTRICT` |  |  |
-| C-08 | 도서당 미반납 대여 최대 한 건 | 부분 고유 인덱스 |  |  |
+| C-01 | 이메일 문자열 중복 금지 | `UNIQUE` | 같은 이메일로 회원이 두 번 등록되면 어느 회원인지 구분할 수 없고 연락·로그인이 꼬인다 | 가족이 이메일을 함께 쓰는 경우 등 고유성이 요구사항에 없어 Q1으로 남겼다 |
+| C-02 | ISBN 필수·중복 금지 | `NOT NULL + UNIQUE` | ISBN이 없거나 같은 ISBN이 여러 행이면 도서를 정확히 찾을 수 없다 | R-03이 ISBN을 "저장할 수 있다"고만 했고, 복본 정책도 정해지지 않아 Q2·Q3로 남겼다 |
+| C-03 | 이름·제목 공백 금지 | `CHECK` | NOT NULL은 빈칸('')이나 공백('  ')을 막지 못해, 이름 없는 회원이나 제목 없는 도서가 저장될 수 있다 | Chapter 05는 값의 존재(NOT NULL)까지만 다뤘고, 값의 내용 규칙은 정하지 않았다 |
+| C-04 | `due_at >= borrowed_at` | `CHECK` | 반납예정일이 대여일보다 빠른 대여는 시간상 불가능한 잘못된 데이터다 | Chapter 05 11번에서 "날짜 순서 오류를 막지 못한다"는 한계로만 기록하고 규칙은 Chapter 06으로 미뤘다 |
+| C-05 | `returned_at`은 NULL 또는 대여일 이상 | `CHECK` | 빌리기 전에 반납하는 것은 불가능하다. 단, 미반납 상태를 표현하기 위해 NULL은 허용해야 한다 | 미반납을 NULL로 표현하는 것만 확정했고(R-07), 날짜 선후 규칙은 정하지 않았다 |
+| C-06 | 존재하는 회원·도서만 참조 | `FOREIGN KEY` | 없는 회원이나 없는 도서를 가리키는 고아 대여 기록을 막는다 | Chapter 05에서도 FK는 적용했다. Chapter 06의 loans_nf는 비교 실습을 위해 규칙 없이 만든 뒤 다시 추가한다 |
+| C-07 | 대여 이력이 있는 부모 삭제 금지 | `ON DELETE RESTRICT` | 대여 기록이 있는 회원·도서를 지우면 이력이 고아가 되거나 함께 사라진다. 기록 보존을 위해 삭제를 막는다 | 탈퇴 회원의 대여 기록을 삭제할지 보관할지(Q7)가 정해지지 않았다 |
+| C-08 | 도서당 미반납 대여 최대 한 건 | 부분 고유 인덱스 | 실물 한 권을 두 사람이 동시에 빌린 것으로 기록되는 것을 막는다 | 같은 책의 동시 대여 가능 여부(Q5)와 복본 정책(Q3)이 정해지지 않았다 |
 
 ### 확정되지 않은 정책을 제약조건으로 먼저 만들면 위험한 이유
 
 ```text
-
+제약조건은 DBMS가 예외 없이 강제하는 규칙이라, 실제 업무와 다르면 정상 데이터까지 막는다.
+예를 들어 복본 정책이 정해지기 전에 ISBN에 UNIQUE를 걸면 같은 책 두 번째 권을 등록할 수 없다.
+또 C-07 대신 ON DELETE CASCADE처럼 삭제 규칙을 잘못 정하면, 회원 하나를 지울 때 대여 이력까지 함께 사라져 되돌릴 수 없다.
+그래서 Chapter 05에서는 질문으로 남겨 두었고, Chapter 06에서 정책이 확정된 뒤에야 제약조건으로 옮긴다.
 ```
 
 ---
@@ -323,22 +331,32 @@ code/chapter06/04_add_integrity_rules.sql
 ## 7-1. 규칙을 추가하기 전에 기존 데이터를 먼저 검사해야 하는 이유
 
 ```text
-
+이미 저장된 데이터가 새 규칙을 어기고 있으면 ALTER TABLE 자체가 실패한다. 예를 들어 같은 이메일을 가진 회원이
+두 명 있으면 UNIQUE를 추가할 수 없다. 이때 어느 행이 잘못된 것인지, 병합할지 수정할지는 DBMS가 대신 정해 주지 않으므로
+먼저 위반 데이터를 찾아 업무적으로 처리 방침을 정한 뒤 규칙을 적용해야 한다.
+04 파일도 규칙을 추가하기 전에 NULL 값, 이메일·ISBN 중복, 빈 이름·제목, 날짜 순서 오류, 고아 참조, 활성 대여 중복을
+먼저 검사하고, 위반이 없을 때만 규칙을 적용한다.
 ```
 
 ## 7-2. 실행 결과
 
 ```text
-명명된 제약조건 개수:
-NOT NULL 적용 열 개수:
-부분 고유 인덱스 존재 여부:
-COMMIT 성공 여부:
+명명된 제약조건 개수: 8개
+  (uq_members_nf_email, chk_members_nf_name_not_blank, uq_books_nf_isbn, chk_books_nf_title_not_blank,
+   fk_loans_nf_member, fk_loans_nf_book, chk_loans_nf_due_date, chk_loans_nf_returned_date)
+NOT NULL 적용 열 개수: 10개
+  (members_nf: name, email, joined_at / books_nf: title, author, isbn / loans_nf: member_id, book_id, borrowed_at, due_at)
+부분 고유 인덱스 존재 여부: 존재 (uq_loans_nf_active_book)
+COMMIT 성공 여부: 성공 (오류 없이 전체 트랜잭션이 끝났고, 이후 조회에서 규칙과 인덱스가 확인되었다)
 ```
 
 ### 메타데이터를 확인하는 이유
 
 ```text
-
+ALTER TABLE이 오류 없이 끝났다고 해서 의도한 규칙이 모두 정확한 테이블과 열에 들어갔다고 보장할 수 없다.
+pg_constraint와 pg_attribute 같은 시스템 정보를 직접 조회하면, 규칙의 이름·종류·대상 테이블과 NOT NULL 적용 열을
+눈으로 확인할 수 있어 빠지거나 잘못 걸린 규칙을 찾을 수 있다. 또 규칙 이름을 미리 알아 두면, 이후 실패 테스트에서
+오류 메시지에 나온 이름으로 어떤 규칙이 데이터를 막았는지 바로 알 수 있다.
 ```
 
 ### 증거 화면
@@ -349,7 +367,7 @@ COMMIT 성공 여부:
 assignments/chapter06/images/step07_constraints.png
 ```
 
-`여기에 제약조건/인덱스 적용 확인 화면을 삽입하세요.`
+![제약조건 적용 결과](./images/step07_constraints.png)
 
 ---
 
@@ -365,50 +383,50 @@ code/chapter06/05_integrity_tests.sql
 
 ## 8-1. 허용되어야 하는 경계값
 
-최소 3개를 실행·관찰합니다.
-
 | 테스트 | 예상 | 실제 | 왜 허용되어야 하는가 |
 | --- | --- | --- | --- |
-| `due_at = borrowed_at` | 성공 |  |  |
-| `returned_at = borrowed_at` | 성공 |  |  |
-| `returned_at = NULL` | 성공 |  |  |
-| `published_year = NULL` | 성공 |  |  |
-| 공백이 아닌 한 글자 이름 | 성공 |  |  |
+| `due_at = borrowed_at` | 성공 | 성공 | C-04는 "반납예정일 ≥ 대여일"이므로 같은 날은 규칙의 경계 안이다. 당일 반납 대여는 실제 업무에서도 가능하다. |
+| `returned_at = borrowed_at` | 성공 | 성공 | C-05는 "반납일 ≥ 대여일"이므로 빌린 날 바로 반납하는 경우를 막으면 안 된다. |
+| `returned_at = NULL` | 성공 | 성공 | 미반납 대여를 표현하기 위해 NULL을 허용하기로 했다(R-07, C-05). |
+| `published_year = NULL` | 성공 | 성공 | 출판연도는 선택값이며 C-01~C-08 어디에도 필수로 정하지 않았다. 연도 미상 도서도 등록할 수 있어야 한다. |
+| 공백이 아닌 한 글자 이름 | 성공 | 성공 | C-03은 "공백만 있는 이름"을 막는 규칙이지 짧은 이름을 막는 규칙이 아니다. '김'처럼 한 글자 이름도 정상이다. |
 
 ## 8-2. 실패해야 하는 오류값
 
-최소 6개를 실행합니다.
-
 | 오류 테스트 | 기대 규칙 | 실제 결과 | 오류 메시지 핵심 | 실패해야 하는 이유 |
 | --- | --- | --- | --- | --- |
-| 필수값 NULL | `NOT NULL` |  |  |  |
-| ISBN NULL | `NOT NULL` |  |  |  |
-| 이메일 중복 | `UNIQUE` |  |  |  |
-| ISBN 중복 | `UNIQUE` |  |  |  |
-| 공백 이름/제목 | `CHECK` |  |  |  |
-| 존재하지 않는 회원 | `FOREIGN KEY` |  |  |  |
-| 존재하지 않는 도서 | `FOREIGN KEY` |  |  |  |
-| 날짜 순서 위반 | `CHECK` |  |  |  |
-| 두 번째 미반납 대여 | 부분 고유 인덱스 |  |  |  |
-| 참조 중 부모 삭제 | `RESTRICT/FK` |  |  |  |
+| 필수값 NULL | `NOT NULL` | 실패 | null value in column "name" ... violates not-null constraint | 이름 없는 회원은 누구인지 알 수 없다 |
+| ISBN NULL | `NOT NULL` | 실패 | null value in column "isbn" ... violates not-null constraint | C-02에서 ISBN을 필수로 확정했다 |
+| 이메일 중복 | `UNIQUE` | 실패 | duplicate key value violates unique constraint "uq_members_nf_email" | junho@example.com은 이미 이준호의 이메일이다(C-01) |
+| ISBN 중복 | `UNIQUE` | 실패 | duplicate key value violates unique constraint "uq_books_nf_isbn" | ISBN-001은 이미 "데이터베이스 입문"의 ISBN이다(C-02) |
+| 공백 이름/제목 | `CHECK` | 실패 | violates check constraint "chk_members_nf_name_not_blank" | '   '는 NULL은 아니지만 실제 이름이 아니다(C-03) |
+| 존재하지 않는 회원 | `FOREIGN KEY` | 실패 | violates foreign key constraint "fk_loans_nf_member" | 999번 회원은 없으므로 고아 대여 기록이 된다(C-06) |
+| 존재하지 않는 도서 | `FOREIGN KEY` | 실패 | violates foreign key constraint "fk_loans_nf_book" | 999번 도서는 없으므로 고아 대여 기록이 된다(C-06) |
+| 날짜 순서 위반 | `CHECK` | 실패 | violates check constraint "chk_loans_nf_due_date" | 4/20에 빌려 4/10까지 반납하는 것은 시간상 불가능하다(C-04) |
+| 두 번째 미반납 대여 | 부분 고유 인덱스 | 실패 | duplicate key value violates unique constraint "uq_loans_nf_active_book" | 도서 201은 이미 대여 1003으로 미반납 상태라 동시에 또 빌릴 수 없다(C-08) |
+| 참조 중 부모 삭제 | `RESTRICT/FK` | 실패 | update or delete on table "members_nf" violates foreign key constraint "fk_loans_nf_member" | 회원 101은 대여 기록 2건이 있어 지우면 이력이 고아가 된다(C-07) |
 
 ## 8-3. 테스트 후 기준 상태 재검증
 
 ```text
-raw:
-members:
-books:
-loans:
-미반납:
-회원 고아 참조:
-도서 고아 참조:
-활성 대여 중복:
+raw: 3
+members: 2
+books: 2
+loans: 3
+미반납: 2
+회원 고아 참조: 0
+도서 고아 참조: 0
+활성 대여 중복: 0
+검증 메시지: Chapter 06 integrity test baseline preserved
 ```
 
 ### 실패 테스트 후 기준 데이터가 유지되어야 하는 이유
 
 ```text
-
+제약조건은 잘못된 데이터를 거부할 뿐 아니라, 거부된 문장이 기존 데이터를 하나도 바꾸지 않아야 의미가 있다.
+실패한 INSERT가 일부만 들어가거나 실패한 DELETE가 다른 행을 지웠다면 데이터가 이미 망가진 것이다.
+또 경계값 테스트로 넣은 임시 행을 지우지 않으면 다음 테스트의 기준이 달라진다. 그래서 테스트가 끝난 뒤
+회원 2명·도서 2권·대여 3건·미반납 2건이라는 기준 상태가 그대로인지 다시 확인한다.
 ```
 
 ### 증거 화면
@@ -419,7 +437,7 @@ loans:
 assignments/chapter06/images/step08_integrity_error.png
 ```
 
-`여기에 대표 실패 테스트와 오류 메시지 화면을 삽입하세요.`
+![무결성 실패 테스트 결과](./images/step08_integrity_error.png)
 
 ---
 
